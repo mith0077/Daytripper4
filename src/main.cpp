@@ -1,0 +1,174 @@
+#include "PCH.h"
+
+#include "Plugin.h"
+#include "Settings.h"
+#include "DefaultObjectHook.h"
+#include "Fixes/Fixes.h"
+#include "Patches/Patches.h"
+#include "Warnings/Warnings.h"
+
+using namespace std;
+using namespace F4SE::stl;
+using namespace REL;
+
+inline constexpr Version RUNTIME_1_11_191{ 1, 11, 191, 0 };
+
+
+constexpr size_t TRAMPOLINE_SIZE = 1u << 12;
+const auto RUNTIME_VERSION_MIN = Relocate(F4SE::RUNTIME_1_10_163, F4SE::RUNTIME_1_10_984, F4SE::RUNTIME_VR_1_2_72);
+const auto RUNTIME_VERSION_MAX = Relocate(F4SE::RUNTIME_1_10_163, RUNTIME_1_11_191, F4SE::RUNTIME_VR_1_2_72);
+constexpr auto RUNTIME_VERSION_NG_COMPAT = F4SE::RUNTIME_1_10_984;
+constexpr auto RUNTIME_VERSION_AE_COMPAT = RUNTIME_1_11_191;
+
+inline void OnModuleLoad()
+{
+    DefaultObjectHook::Install();
+    Fixes::OnModuleLoad();
+    Patches::OnModuleLoad();
+    Warnings::OnModuleLoad();
+}
+
+inline void OnGameDataReady()
+{
+    Fixes::OnGameDataReady();
+    Patches::OnGameDataReady();
+    Warnings::OnGameDataReady();
+}
+
+inline void OnPostLoadGame()
+{
+    Fixes::OnPostLoadGame();
+    Patches::OnPostLoadGame();
+    Warnings::OnPostLoadGame();
+}
+
+
+namespace
+{
+    void OpenLog();
+    void F4SEAPI MessageHandler(F4SE::MessagingInterface::Message* a_message);
+}
+
+extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Query(const F4SE::QueryInterface* a_f4se, F4SE::PluginInfo* a_info)
+{
+    if (!a_f4se)
+        return false;
+    if (!a_info)
+        return false;
+
+    OpenLog();
+
+    a_info->infoVersion = F4SE::PluginInfo::kVersion;
+    a_info->name = Plugin::NAME;
+    a_info->version = Plugin::VERSION[0];
+
+    if (a_f4se->IsEditor()) {
+        logger::critical("Loading into editor, aborting.");
+
+        return false;
+    }
+
+    return true;
+}
+
+extern "C" DLLEXPORT bool F4SEAPI F4SEPlugin_Load(const F4SE::LoadInterface* a_f4se)
+{
+    if (!a_f4se)
+        return false;
+
+    F4SE::Init(a_f4se);
+
+    logger::info("{} v{}.{}.{} [{} {}] is loading", Plugin::NAME, Plugin::VERSION[0], Plugin::VERSION[1], Plugin::VERSION[2], __DATE__, __TIME__);
+
+    const auto ver = Module::get().version();
+    logger::info("Detected runtime: Fallout 4{} (v{}).", Module::IsVR() ? " VR" : (Module::IsNG() ? " NG" : ""), ver.string());
+
+    if (ver < RUNTIME_VERSION_MIN || RUNTIME_VERSION_MAX < ver) {
+        logger::critical("Runtime version is not supported, aborting.");
+
+        return false;
+    }
+
+    const auto messaging = F4SE::GetMessagingInterface();
+    if (!messaging || !messaging->RegisterListener(MessageHandler)) {
+        logger::critical("Failed to get message interface, aborting.");
+
+        return false;
+    }
+
+    Settings::Load();
+    F4SE::AllocTrampoline(TRAMPOLINE_SIZE);
+    OnModuleLoad();
+
+    return true;
+}
+
+// F4SE NP requirement
+F4SE_EXPORT auto F4SEPlugin_Version = []() noexcept {
+    F4SE::PluginVersionData data{};
+
+    data.PluginName(Plugin::NAME);
+    data.PluginVersion(Plugin::VERSION);
+    data.AuthorName("mith077");
+    data.UsesAddressLibrary(true);
+    data.UsesSigScanning(false);
+    data.IsLayoutDependent(true);
+    data.HasNoStructUse(false);
+    data.CompatibleVersions({ RUNTIME_VERSION_NG_COMPAT, RUNTIME_VERSION_AE_COMPAT });
+
+    return data;
+}();
+
+
+namespace
+{
+    void OpenLog()
+    {
+    #ifndef NDEBUG
+        auto sink = make_shared<spdlog::sinks::msvc_sink_mt>();
+    #else
+        auto path = logger::log_directory();
+        if (!path) {
+            report_and_fail("Failed to find standard logging directory.");
+        }
+        const auto gamepath = Module::IsVR() ? "Fallout4VR/F4SE" : "Fallout4/F4SE";
+        if (!path.value().generic_string().ends_with(gamepath)) {
+            // handle bug where game directory is missing
+            path = path.value().parent_path().append(gamepath);
+        }
+
+        *path /= fmt::format("{}.log", Plugin::NAME);
+        auto sink = make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
+    #endif
+
+    #ifndef NDEBUG
+        const auto level = spdlog::level::trace;
+    #else
+        const auto level = spdlog::level::trace;
+    #endif
+
+        auto log = make_shared<spdlog::logger>("global log", move(sink));
+        log->set_level(level);
+        log->flush_on(level);
+
+        spdlog::set_default_logger(move(log));
+        spdlog::set_pattern("[%Y-%m-%d %T.%e][%-16s:%-4#][%L]: %v");
+    }
+
+    void F4SEAPI MessageHandler(F4SE::MessagingInterface::Message* a_message)
+    {
+        if (!a_message)
+            return;
+
+        switch (a_message->type) {
+        case F4SE::MessagingInterface::kGameDataReady:
+            OnGameDataReady();
+
+            break;
+        case F4SE::MessagingInterface::kPostLoadGame:
+            OnPostLoadGame();
+
+            break;
+        }
+    }
+}

@@ -1,0 +1,31 @@
+[Fixes]
+ProjectileDownwardAiming = true   # Fixes bullets collide at feet, if guns are aimed downward
+                                  # Also fixes Fatman MIRV bug as well
+BookMenuText = true               # Fixes blurry display of text in VR Book menu interface
+RobotModMenu = true               # Fixes Robot Workbench menu to work properly in VR.
+DlcPreCulling = true              # Fixes invisible objects/landscape issue in DLC/Mod worldspace, related to PreVis
+WetnessMaterialSsr = true         # Fixes OOB memory access related to material flag 'WetnessControlScreenSpaceReflections'
+NiExtraDataTyping = true          # Prevents non-NiExtraData object to be assigned to extra data list of .nif files
+GrenadeProjectile = true          # Prevents VR physical throwing feature to affect weapon launched projectile
+                                  # Supports grenades that have #Projectiles attribute larger than 1
+                                  # Also apply perk modifier 'Mod Actor Grenade Speed Mult' correctly
+
+[Patches]
+ExtendedArchiveLimit = true  # Enables engine to load more than 256 BA2 archives
+RejectInvalidMaterial = true # Reduces CTDs caused by malformed node in NIF by rejecting them to load
+PluginVersionPatcher = true  # Enables game to recognize/load plugins with version 1.00
+ExtendedFormRange = true     # Adds support for loading Form IDs < xx000800 from plugins
+EslExtensionSupport = true   # Enables game to recognize/load plugin files with .esl extension
+                             # NOTE: Will be loaded as non-light ESP plugin, if SmallFileLoader is off
+SmallFileLoader = false      # Enables more than 256 plugin to load by enabling light Form ID space (FExxx)
+                             # WARNING: Save data format is updated as well; Once enabled, there is no way back!
+CreationClubSupport = true   # Loads Creation Club contents in Data folder automatically. Overrides 'Plugin.txt'.
+                             # Also loads special plugin 'ccUpdate-Fallout4_VR.esl'.
+PipBoyModSupport = true      # Makes Pip-Boy modifiable at Armor Workbench
+FreeBuildSupport = true      # Enables free build mode in VR Workshop CC content
+
+[Warnings]
+ReferenceHandleCap = true              # Emits warning about excessive use of Reference Handle on start up
+                                       # See https://stepmodifications.org/forum/topic/18995-reference-handle-cap/
+ReferenceHandleLimit_MainMenu = 800000 # Warning threshold on Main Menu load, 0 means disabled for this timing
+ReferenceHandleLimit_LoadGame = 900000 # Warning threshold on Save Data load, 0 means disabled for this timing
