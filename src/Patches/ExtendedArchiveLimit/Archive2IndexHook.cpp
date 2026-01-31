@@ -585,8 +585,6 @@ namespace ExtendedArchiveLimit::Archive2IndexHook
         static const auto patch_begin = target + VariantOffset(0x6B, 0x6B, 0x6B).offset();
         static const auto patch_end = target + VariantOffset(0x73, 0x73, 0x73).offset();
 
-        // TODO: Retrieve a_index in uint16_t
-
         struct Patch : Xbyak::CodeGenerator
         {
             Patch()

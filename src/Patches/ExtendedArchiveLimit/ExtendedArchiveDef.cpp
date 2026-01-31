@@ -10,6 +10,7 @@ using RE::BSResource::Stream;
 using RE::BSResource::AsyncStream;
 using Archive2Index = RE::BSResource::Archive2::Index;
 using ResourceID = RE::BSResource::ID;
+using TexIndex = RE::TextureIndex::Index;
 
 
 namespace ExtendedArchiveLimit
@@ -143,5 +144,89 @@ namespace ExtendedArchiveLimit
 
         a_pEntry->dataFileIndex = static_cast<uint8_t>(baseIndex);
         a_pEntry->chunkOffsetOrType = extendedIndex + (a_pEntry->chunkOffsetOrType & 0x00FF);
+    }
+
+    void ConstructTextureIndexEx(TexIndex* a_pTexIndex)
+    {
+        logger::debug("Entering ConstructTextureIndexEx()");
+
+        assert(a_pTexIndex);
+
+        auto ppExtendedArray_DataFileNameId = reinterpret_cast<vector<ResourceID>**>(a_pTexIndex->dataFileNameIDs + EXTENDED_ARRAY_POS);
+        *ppExtendedArray_DataFileNameId = new vector<ResourceID>();
+    }
+
+    void DestructTextureIndexEx(TexIndex* a_pTexIndex)
+    {
+        logger::debug("Entering DestructTextureIndexEx()");
+
+        assert(a_pTexIndex);
+
+        auto ppExtendedArray_DataFileNameId = reinterpret_cast<vector<ResourceID>**>(a_pTexIndex->dataFileNameIDs + EXTENDED_ARRAY_POS);
+        delete *ppExtendedArray_DataFileNameId;
+        *ppExtendedArray_DataFileNameId = nullptr;
+    }
+
+    ResourceID& GetTextureDataFileNameIdEx(TexIndex* a_pTexIndex, uint16_t a_index)
+    {
+        // logger::debug("Entering GetTextureDataFileNameIdEx(), index = {}", a_index);
+
+        assert(a_pTexIndex);
+
+        if (EXTENDED_ARRAY_POS > a_index)
+            return a_pTexIndex->dataFileNameIDs[a_index];
+
+        auto pExtendedArray = *reinterpret_cast<vector<ResourceID>**>(a_pTexIndex->dataFileNameIDs + EXTENDED_ARRAY_POS);
+        uint16_t extendedTextureIndex = a_index - EXTENDED_ARRAY_POS;
+
+        assert(pExtendedArray);
+
+        static mutex mtx;
+        lock_guard<std::mutex> lock(mtx);
+
+        if (pExtendedArray->size() < extendedTextureIndex + 0x1)
+            pExtendedArray->resize((extendedTextureIndex & 0xFF00) + 0x100);
+
+        return pExtendedArray->at(extendedTextureIndex);
+    }
+
+    std::uint16_t GetTextureDataFileIndexEx(TexIndex::Index::Entry* a_pTexEntry)
+    {
+        // logger::debug("Entering GetTextureDataFileIndexEx()");
+
+        assert(a_pTexEntry);
+        assert(a_pTexEntry->chunks);
+
+        uint16_t baseIndex = a_pTexEntry->dataFileIndex;
+        uint16_t extendedIndex = static_cast<uint16_t>(a_pTexEntry->chunks[0].padding) & 0xFF00;
+
+        return baseIndex + extendedIndex;
+    }
+
+    void SetTextureDataFileIndexEx(TexIndex::Entry* a_pTexEntry, std::uint16_t a_index)
+    {
+        // logger::debug("Entering SetTextureDataFileIndexEx(), index = {}", a_index);
+
+        assert(a_pTexEntry);
+        assert(a_pTexEntry->chunks);
+
+        uint16_t baseIndex = a_index & 0x00FF;
+        uint16_t extendedIndex = a_index & 0xFF00;
+
+        a_pTexEntry->dataFileIndex = static_cast<uint8_t>(baseIndex);
+        a_pTexEntry->chunks[0].padding = extendedIndex;
+    }
+
+    void CopyTextureDataFileIndexEx(TexIndex::Entry* a_pDstEntry, RE::TextureIndex::Index::Entry* a_pSrcEntry)
+    {
+        // logger::debug("Entering CopyTextureDataFileIndexEx()");
+
+        assert(a_pDstEntry);
+        assert(a_pDstEntry->chunks);
+        assert(a_pSrcEntry);
+        assert(a_pSrcEntry->chunks);
+
+        a_pDstEntry->dataFileIndex = a_pSrcEntry->dataFileIndex;
+        a_pDstEntry->chunks[0].padding = a_pSrcEntry->chunks[0].padding;
     }
 }
