@@ -71,6 +71,8 @@ set(SOURCE_FILES
     "${SOURCE_DIR}/Patches/ExtendedArchiveLimit/TextureIndexEntryHook.h"
     "${SOURCE_DIR}/Patches/ExtendedArchiveLimit/TextureIndexHook.cpp"
     "${SOURCE_DIR}/Patches/ExtendedArchiveLimit/TextureIndexHook.h"
+    "${SOURCE_DIR}/Patches/ExtendedArchiveLimit/TextureRequestHook.cpp"
+    "${SOURCE_DIR}/Patches/ExtendedArchiveLimit/TextureRequestHook.h"
     "${SOURCE_DIR}/Patches/ExtendedFormRange.cpp"
     "${SOURCE_DIR}/Patches/ExtendedFormRange.h"
     "${SOURCE_DIR}/Patches/FreeBuildSupport.cpp"

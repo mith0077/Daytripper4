@@ -39,43 +39,6 @@ namespace ExtendedArchiveLimit::TextureIndexEntryHook
         }
     }
 
-    namespace CreateStreamingDDSTexture_1
-    {
-        // XXX Status: verified
-        static const uintptr_t target = RelocationID(823682, 2277293, 823682).address();
-        static const auto patch_begin = target + VariantOffset(0x187, 0x17C, 0x187).offset();
-        static const auto patch_end = target + VariantOffset(0x18C, 0x181, 0x18C).offset();
-
-        uint8_t IsStreamDataAvailable(TextureIndex::Index::Entry* a_pTexEntry)
-        {
-            if (GetTextureDataFileIndexEx(a_pTexEntry) > 255)
-                return 0;
-            else
-                return 1;
-        }
-
-        struct Patch : Xbyak::CodeGenerator
-        {
-            Patch()
-            {
-                mov(rcx, rsi);
-                mov(rax, reinterpret_cast<uintptr_t>(IsStreamDataAvailable));
-                call(rax);
-                // HACK: Disable SteramingTextureUpgrade for extended texture archives
-                or_(byte[r15 + 0x3F], al);
-                mov(rcx, patch_end);
-                jmp(rcx);
-            }
-        };
-
-        inline bool InstallHook()
-        {
-            Patch p;
-
-            return InstallPatch(p, patch_begin, patch_end);
-        }
-    }
-
     namespace CreateStreamingTexture
     {
         // XXX Status: verified
@@ -259,53 +222,12 @@ namespace ExtendedArchiveLimit::TextureIndexEntryHook
         }
     }
 
-    namespace ChunkDescOpEq
-    {
-        // XXX Status: verified
-        static const uintptr_t target = RelocationID(547291, 0, 547291).address();
-        static const auto patch_begin = target + VariantOffset(0x0, 0, 0x0).offset();
-        static const auto patch_end = target + VariantOffset(0x26, 0, 0x26).offset();
-
-        static BSTextureStreamer::ChunkDesc* CopyChunk(BSTextureStreamer::ChunkDesc* a_pDstChunk, BSTextureStreamer::ChunkDesc* a_pSrcChunk)
-        {
-            a_pDstChunk->dataFileOffset = a_pSrcChunk->dataFileOffset;
-            a_pDstChunk->size = a_pSrcChunk->size;
-            a_pDstChunk->uncompressedSize = a_pSrcChunk->uncompressedSize;
-            a_pDstChunk->mipFirst = a_pSrcChunk->mipFirst;
-            a_pDstChunk->mipLast = a_pSrcChunk->mipLast;
-            a_pDstChunk->padding = a_pSrcChunk->padding;
-
-            return a_pDstChunk;
-        }
-
-        struct Patch : Xbyak::CodeGenerator
-        {
-            Patch()
-            {
-                mov(rax, reinterpret_cast<uintptr_t>(CopyChunk));
-                jmp(rax);
-            }
-        };
-
-        inline bool InstallHook()
-        {
-            Patch p;
-
-            return InstallPatch(p, patch_begin, patch_end);
-        }
-    }
-
     void InstallHook()
     {
         if (CreateStreamingDDSTexture::InstallHook())
             logger::debug("Installed CreateStreamingDDSTexture hook");
         else
             logger::debug("Failed CreateStreamingDDSTexture hook");
-
-        if (CreateStreamingDDSTexture_1::InstallHook())
-            logger::debug("Installed CreateStreamingDDSTexture_1 hook");
-        else
-            logger::debug("Failed CreateStreamingDDSTexture_1 hook");
 
         if (CreateStreamingTexture::InstallHook())
             logger::debug("Installed CreateStreamingTexture hook");
@@ -336,10 +258,5 @@ namespace ExtendedArchiveLimit::TextureIndexEntryHook
             logger::debug("Installed NativeDescOpEq hook");
         else
             logger::debug("Failed NativeDescOpEq hook");
-
-        if (ChunkDescOpEq::InstallHook())
-            logger::debug("Installed ChunkDescOpEq hook");
-        else
-            logger::debug("Failed ChunkDescOpEq hook");
     }
 }

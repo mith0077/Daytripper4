@@ -6,6 +6,7 @@
 #include "ExtendedArchiveLimit/Archive2IndexEntryHook.h"
 #include "ExtendedArchiveLimit/TextureIndexHook.h"
 #include "ExtendedArchiveLimit/TextureIndexEntryHook.h"
+#include "ExtendedArchiveLimit/TextureRequestHook.h"
 
 
 namespace ExtendedArchiveLimit
@@ -23,6 +24,9 @@ namespace ExtendedArchiveLimit
 
         TextureIndexEntryHook::InstallHook();
         logger::debug("Installed TextureIndexEntryHook");
+
+        TextureRequestHook::InstallHook();
+        logger::debug("Installed TextureRequestHook");
 
         logger::info("Installed ExtendedArchiveLimit patch");
     }
