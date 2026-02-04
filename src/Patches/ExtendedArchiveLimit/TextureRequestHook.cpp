@@ -41,24 +41,29 @@ namespace ExtendedArchiveLimit::TextureRequestHook
 
     namespace HandleModifyRequest
     {
-        // TODO
+        // XXX Status: verified
         static const uintptr_t target = RelocationID(585923, 0, 585923).address();
-        static const auto patch_begin = target + 0x0;
-        static const auto patch_end = target + 0x0;
+        static const auto patch_begin = target + 0x1D0;
+        static const auto patch_end = target + 0x1D8;
 
         struct Patch : Xbyak::CodeGenerator
         {
             Patch()
             {
+                mov(dx, word[rsp + 0x4A]);
+                mov(rax, reinterpret_cast<uintptr_t>(SetTextureDataFileIndexEx));
+                call(rax);
+                mov(rcx, rdi);
+                mov(rax, patch_end);
+                jmp(rax);
             }
         };
 
         inline bool InstallHook()
         {
-            return true;
-            // Patch p;
-            //
-            // return InstallPatch(p, patch_begin, patch_end);
+            Patch p;
+
+            return InstallPatch(p, patch_begin, patch_end);
         }
     }
 
@@ -80,9 +85,9 @@ namespace ExtendedArchiveLimit::TextureRequestHook
                 mov(rcx, rdi);
                 mov(rax, reinterpret_cast<uintptr_t>(GetTextureDataFileIndexEx));
                 call(rax);
-                mov(ebx, eax);
                 mov(rdx, rdi);
                 mov(rcx, rbx);
+                mov(ebx, eax);
                 cmp(dword[rdx + 0x104], 0x1);
                 mov(rax, patch_end);
                 jmp(rax);
@@ -129,7 +134,7 @@ namespace ExtendedArchiveLimit::TextureRequestHook
 
     namespace ThreadProc
     {
-        // XXX Status: unchecked
+        // XXX Status: verified
         static const uintptr_t target = VariantID(989173, 2275577, 0x1D3A4D0).address();
         static const auto patch_begin = target + VariantOffset(0x48F, 0x9AD, 0x48F).offset();
         static const auto patch_end = target + VariantOffset(0x494, 0x9B2, 0x494).offset();
@@ -157,10 +162,10 @@ namespace ExtendedArchiveLimit::TextureRequestHook
 
     namespace ThreadProc_1
     {
-        // XXX Status: unchecked
+        // XXX Status: verified
         static const uintptr_t target = VariantID(0, 2275577, 0x0).address();
-        static const auto patch_begin = target + VariantOffset(0, 0x10CB, 0).offset();
-        static const auto patch_end = target + VariantOffset(0, 0x10D0, 0).offset();
+        static const auto patch_begin = target + 0x10CB;
+        static const auto patch_end = target + 0x10D0;
 
         struct Patch : Xbyak::CodeGenerator
         {
@@ -183,6 +188,34 @@ namespace ExtendedArchiveLimit::TextureRequestHook
         }
     }
 
+    namespace ThreadProc_2
+    {
+        // XXX Status: verified
+        static const uintptr_t target = VariantID(0, 2275577, 0x0).address();
+        static const auto patch_begin = target + 0x82E;
+        static const auto patch_end = target + 0x836;
+
+        struct Patch : Xbyak::CodeGenerator
+        {
+            Patch()
+            {
+                mov(dx, word[rbp - 0x16]);
+                mov(rax, reinterpret_cast<uintptr_t>(SetTextureDataFileIndexEx));
+                call(rax);
+                mov(rcx, r14);
+                mov(rax, patch_end);
+                jmp(rax);
+            }
+        };
+
+        inline bool InstallHook()
+        {
+            Patch p;
+
+            return InstallPatch(p, patch_begin, patch_end);
+        }
+    }
+
     namespace ChunkDescOpEq
     {
         // XXX Status: verified
@@ -190,8 +223,13 @@ namespace ExtendedArchiveLimit::TextureRequestHook
         static const auto patch_begin = target + 0x0;
         static const auto patch_end = target + 0x26;
 
-        static BSTextureStreamer::ChunkDesc* CopyChunk(BSTextureStreamer::ChunkDesc* a_pDstChunk, BSTextureStreamer::ChunkDesc* a_pSrcChunk)
+        static BSTextureStreamer::ChunkDesc* CopyChunkDesc(BSTextureStreamer::ChunkDesc* a_pDstChunk, BSTextureStreamer::ChunkDesc* a_pSrcChunk)
         {
+            // logger::debug("Entering CopyChunkDesc()");
+
+            assert(a_pDstChunk);
+            assert(a_pSrcChunk);
+
             a_pDstChunk->dataFileOffset = a_pSrcChunk->dataFileOffset;
             a_pDstChunk->size = a_pSrcChunk->size;
             a_pDstChunk->uncompressedSize = a_pSrcChunk->uncompressedSize;
@@ -206,7 +244,35 @@ namespace ExtendedArchiveLimit::TextureRequestHook
         {
             Patch()
             {
-                mov(rax, reinterpret_cast<uintptr_t>(CopyChunk));
+                mov(rax, reinterpret_cast<uintptr_t>(CopyChunkDesc));
+                jmp(rax);
+            }
+        };
+
+        inline bool InstallHook()
+        {
+            Patch p;
+
+            return InstallPatch(p, patch_begin, patch_end);
+        }
+    }
+
+    namespace StreamingTextureUpgrade
+    {
+        // XXX Status: verified
+        static const uintptr_t target = RelocationID(580617, 2277276, 580617).address();
+        static const auto patch_begin = target + VariantOffset(0x11E, 0x117, 0x11E).offset();
+        static const auto patch_end = target + VariantOffset(0x126, 0x11F, 0x126).offset();
+
+        struct Patch : Xbyak::CodeGenerator
+        {
+            Patch()
+            {
+                Module::IsNG() ? mov(rcx, ptr[rbp + 0x18]) : mov(rcx, ptr[r14 + 0x18]);
+                movzx(edx, byte[rcx + 0x4]);
+                mov(rax, ptr[rsp + 0x68]);
+                add(edx, dword[rax + 0x14]);  // chunks[0].padding
+                mov(rax, patch_end);
                 jmp(rax);
             }
         };
@@ -226,7 +292,9 @@ namespace ExtendedArchiveLimit::TextureRequestHook
         else
             logger::debug("Failed DecompressStreamedLoad hook");
 
-        if (HandleModifyRequest::InstallHook())
+        if (Module::IsNG())
+            ;  // NOTE: HandleModifyRequest is inlined to ThreadProc in NG
+        else if (HandleModifyRequest::InstallHook())
             logger::debug("Installed HandleModifyRequest hook");
         else
             logger::debug("Failed HandleModifyRequest hook");
@@ -255,9 +323,21 @@ namespace ExtendedArchiveLimit::TextureRequestHook
         else
             logger::debug("Failed ThreadProc_1 hook");
 
+        if (!Module::IsNG())
+            ;  // NOTE: HandleModifyRequest is inlined to ThreadProc in NG
+        else if (ThreadProc_2::InstallHook())
+            logger::debug("Installed ThreadProc_2 hook");
+        else
+            logger::debug("Failed ThreadProc_2 hook");
+
         if (ChunkDescOpEq::InstallHook())
             logger::debug("Installed ChunkDescOpEq hook");
         else
             logger::debug("Failed ChunkDescOpEq hook");
+
+        if (StreamingTextureUpgrade::InstallHook())
+            logger::debug("Installed StreamingTextureUpgrade hook");
+        else
+            logger::debug("Failed StreamingTextureUpgrade hook");
     }
 }
