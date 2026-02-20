@@ -229,12 +229,10 @@ namespace ExtendedArchiveLimit::Archive2IndexEntryHook
         {
             Patch()
             {
-                auto isAE = Version(1, 11, 191, 0) == Module::get().version();
-
-                isAE ? lea(rcx, ptr[rdi + 0x148]) : lea(rcx, ptr[rsi + 0x148]);
+                IsAE() ? lea(rcx, ptr[rdi + 0x148]) : lea(rcx, ptr[rsi + 0x148]);
                 mov(rax, reinterpret_cast<uintptr_t>(GetDataFileIndexEx));
                 call(rax);
-                isAE ? mov(rcx, ptr[rdi + 0x170]) : mov(rcx, ptr[rsi + 0x170]);
+                IsAE() ? mov(rcx, ptr[rdi + 0x170]) : mov(rcx, ptr[rsi + 0x170]);
                 mov(rdx, patch_end);
                 jmp(rdx);
             }

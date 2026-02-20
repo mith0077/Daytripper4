@@ -29,7 +29,7 @@ namespace ExtendedArchiveLimit::Archive2IndexHook
             {
                 auto reg_self = Module::IsNG() ? r14 : rbx;
 
-                if (Version(1, 11, 191, 0) == Module::get().version())
+                if (Module::get().version() == RUNTIME_1_11_191)
                     mov(rax, BSReadWriteLockCtor_addr_1_11_191);
                 else
                     mov(rax, BSReadWriteLockCtor_addr);

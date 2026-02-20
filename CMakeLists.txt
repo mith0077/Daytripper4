@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 set(NAME "Daytripper4")
-set(VERSION 1.4.6)
+set(VERSION 1.4.8)
 
 project(
     ${NAME}

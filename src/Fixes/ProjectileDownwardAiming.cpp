@@ -59,7 +59,9 @@ namespace ProjectileDownwardAiming
             NiPoint3& posRayDst = a_pProjectile->data.location;
 
             NiPoint3 posShootOrigin, posPlaceholder;
-            if (GetVrHmdPos(a_pShooter, posShootOrigin))
+            if (!a_pShooter->IsPlayerRef())
+                posShootOrigin = a_pShooter->data.location;
+            else if (GetVrHmdPos(a_pShooter, posShootOrigin))
                 ; // NOTE: GetEyeVector() won't work in VR, so take HMD instead
             else
                 a_pShooter->GetEyeVector(posShootOrigin, posPlaceholder, true);

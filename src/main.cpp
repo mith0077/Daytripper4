@@ -2,6 +2,7 @@
 
 #include "Plugin.h"
 #include "Settings.h"
+#include "PatchLib.h"
 #include "DefaultObjectHook.h"
 #include "Fixes/Fixes.h"
 #include "Patches/Patches.h"
@@ -10,8 +11,6 @@
 using namespace std;
 using namespace F4SE::stl;
 using namespace REL;
-
-inline constexpr Version RUNTIME_1_11_191{ 1, 11, 191, 0 };
 
 
 constexpr size_t TRAMPOLINE_SIZE = 1u << 12;
