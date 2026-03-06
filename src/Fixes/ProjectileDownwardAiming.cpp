@@ -48,20 +48,12 @@ namespace ProjectileDownwardAiming
             return true;
         }
 
-        static void WriteRayCastSource(NiPoint3* a_pPosRaySrc, Projectile* a_pProjectile, Actor* a_pShooter)
+        inline void WriteRayCastSourcePlayer(NiPoint3* a_pPosRaySrc, Projectile* a_pProjectile, Actor* a_pShooter)
         {
-            logger::debug("Entering WriteRayCastSource()");
-
-            assert(a_pPosRaySrc);
-            assert(a_pProjectile);
-            assert(a_pShooter);
-
             NiPoint3& posRayDst = a_pProjectile->data.location;
 
             NiPoint3 posShootOrigin, posPlaceholder;
-            if (!a_pShooter->IsPlayerRef())
-                posShootOrigin = a_pShooter->data.location;
-            else if (GetVrHmdPos(a_pShooter, posShootOrigin))
+            if (GetVrHmdPos(a_pShooter, posShootOrigin))
                 ; // NOTE: GetEyeVector() won't work in VR, so take HMD instead
             else
                 a_pShooter->GetEyeVector(posShootOrigin, posPlaceholder, true);
@@ -84,6 +76,37 @@ namespace ProjectileDownwardAiming
                 a_pPosRaySrc->y = posShootOrigin.y;
                 a_pPosRaySrc->z = posShootOrigin.z;
             }
+        }
+
+        inline void WriteRayCastSourceNpc(NiPoint3* a_pPosRaySrc, Projectile* a_pProjectile, Actor* a_pShooter)
+        {
+            NiPoint3& posRayDst = a_pProjectile->data.location;
+            NiPoint3& posShootOrigin = a_pShooter->data.location;
+
+            if (posRayDst.z > posShootOrigin.z) {
+                a_pPosRaySrc->x = posShootOrigin.x;
+                a_pPosRaySrc->y = posShootOrigin.y;
+                a_pPosRaySrc->z = posRayDst.z;
+            }
+            else {
+                a_pPosRaySrc->x = posShootOrigin.x;
+                a_pPosRaySrc->y = posShootOrigin.y;
+                a_pPosRaySrc->z = posShootOrigin.z;
+            }
+        }
+
+        static void WriteRayCastSource(NiPoint3* a_pPosRaySrc, Projectile* a_pProjectile, Actor* a_pShooter)
+        {
+            logger::debug("Entering WriteRayCastSource()");
+
+            assert(a_pPosRaySrc);
+            assert(a_pProjectile);
+            assert(a_pShooter);
+
+            if (a_pShooter->IsPlayerRef())
+                WriteRayCastSourcePlayer(a_pPosRaySrc, a_pProjectile, a_pShooter);
+            else
+                WriteRayCastSourceNpc(a_pPosRaySrc, a_pProjectile, a_pShooter);
         }
 
         struct Patch : Xbyak::CodeGenerator
